@@ -1,0 +1,5 @@
+{
+  "name": "Éditeur de Photo d'Identité",
+  "description": "Un outil pour recadrer, retoucher et améliorer vos photos d'identité en utilisant l'IA Gemini pour des résultats parfaits. Chargez une photo, ajustez la luminosité, le contraste et les couleurs, puis utilisez l'amélioration par IA pour un rendu professionnel et téléchargez le résultat.",
+  "requestFramePermissions": []
+}
