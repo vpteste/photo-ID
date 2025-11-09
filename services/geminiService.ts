@@ -1,12 +1,6 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { AiIntensity, FaceLandmarks } from "../types";
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will not work.");
-}
-
 const getPromptForIntensity = (intensity: AiIntensity): string => {
   const baseInstructions = `You are a professional photo retoucher specializing in official identity documents. Your task is to enhance this photograph to meet international standards for clarity and quality. The final image must look natural.
 
@@ -50,11 +44,10 @@ Apply standard professional retouching:
 };
 
 export const enhancePhotoWithAI = async (base64Image: string, mimeType: string, intensity: AiIntensity): Promise<string> => {
-  if (!API_KEY) {
-    throw new Error("La clé API n'est pas configurée.");
-  }
-  
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // The error message "API keys are not supported by this API" suggests
+  // the SDK should be initialized without an API key to allow it to use
+  // the environment's default authentication (like OAuth2).
+  const ai = new GoogleGenAI({});
   const textPrompt = getPromptForIntensity(intensity);
 
   try {
@@ -78,24 +71,30 @@ export const enhancePhotoWithAI = async (base64Image: string, mimeType: string, 
       },
     });
 
+    const blockReason = response.promptFeedback?.blockReason;
+    if (blockReason) {
+       throw new Error(`L'IA n'a pas retourné d'image. La requête a été bloquée pour la raison suivante : ${blockReason}.`);
+    }
+
     for (const part of response.candidates?.[0]?.content.parts || []) {
       if (part.inlineData) {
         return part.inlineData.data;
       }
     }
-    throw new Error("L'IA n'a pas retourné d'image. La réponse a peut-être été bloquée.");
+    
+    throw new Error("L'IA n'a pas retourné d'image. La réponse était vide ou dans un format inattendu.");
+
   } catch (error) {
     console.error("Erreur lors de l'appel à l'API Gemini:", error);
-    throw new Error("Échec de l'amélioration de l'image avec l'IA. Veuillez vérifier la console pour plus de détails.");
+    if (error instanceof Error) {
+        throw new Error(`Échec de l'amélioration de l'image avec l'IA : ${error.message}`);
+    }
+    throw new Error("Échec de l'amélioration de l'image avec l'IA. Une erreur inconnue est survenue.");
   }
 };
 
 export const detectFaceLandmarks = async (base64Image: string, mimeType: string): Promise<FaceLandmarks> => {
-  if (!API_KEY) {
-    throw new Error("La clé API n'est pas configurée.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({});
   const prompt = `Analyze the provided image. Your task is to identify the location of key facial features. Respond with a JSON object containing the pixel coordinates for the very top of the head (including hair) and the bottom of the chin. The origin (0,0) is the top-left corner of the image. The JSON object must match the provided schema.`;
 
   try {
@@ -136,10 +135,22 @@ export const detectFaceLandmarks = async (base64Image: string, mimeType: string)
       },
     });
 
-    const jsonText = response.text.trim();
+    const blockReason = response.promptFeedback?.blockReason;
+    if (blockReason) {
+        throw new Error(`La requête a été bloquée pour la raison suivante : ${blockReason}.`);
+    }
+
+    const jsonText = response.text?.trim();
+    if (!jsonText) {
+        throw new Error("La réponse de l'IA était vide. La réponse a peut-être été bloquée.");
+    }
+
     return JSON.parse(jsonText) as FaceLandmarks;
   } catch (error) {
     console.error("Erreur lors de l'appel à l'API Gemini pour la détection de visage:", error);
+    if (error instanceof Error) {
+        throw new Error(`Échec de la détection des repères du visage : ${error.message}`);
+    }
     throw new Error("Échec de la détection des repères du visage. L'IA n'a peut-être pas trouvé de visage ou la réponse a été bloquée.");
   }
 };
