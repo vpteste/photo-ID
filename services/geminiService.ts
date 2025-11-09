@@ -44,10 +44,9 @@ Apply standard professional retouching:
 };
 
 export const enhancePhotoWithAI = async (base64Image: string, mimeType: string, intensity: AiIntensity): Promise<string> => {
-  // The error message "API keys are not supported by this API" suggests
-  // the SDK should be initialized without an API key to allow it to use
-  // the environment's default authentication (like OAuth2).
-  const ai = new GoogleGenAI({});
+  // The API key is required when running in a browser environment.
+  // It is automatically provided by the execution environment via process.env.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const textPrompt = getPromptForIntensity(intensity);
 
   try {
@@ -94,7 +93,7 @@ export const enhancePhotoWithAI = async (base64Image: string, mimeType: string, 
 };
 
 export const detectFaceLandmarks = async (base64Image: string, mimeType: string): Promise<FaceLandmarks> => {
-  const ai = new GoogleGenAI({});
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const prompt = `Analyze the provided image. Your task is to identify the location of key facial features. Respond with a JSON object containing the pixel coordinates for the very top of the head (including hair) and the bottom of the chin. The origin (0,0) is the top-left corner of the image. The JSON object must match the provided schema.`;
 
   try {
